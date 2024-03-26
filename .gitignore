@@ -1,0 +1,79 @@
+# Compiled binary executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.bin
+*.o
+*.a
+*.test
+
+# Log files and databases
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# VSCode directories and files
+.vscode/
+*.code-workspace
+
+# Golang specific
+######################
+# Binaries for programs and plugins
+/bin/
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace files
+.gopath/
+.gobuild/
+
+# Go build output
+/dist
+
+# Error files from the go vet command
+vet.report
+
+# Golang CI lint tool
+.golangci.yml
+.golangci.yaml
+
+# External tool packages
+/pkg/
+
+# Dependency files
+Gopkg.lock
+go.sum
+# Consider excluding go.mod if your project needs specific version control
+# go.mod
+
+# JetBrains IDEs
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Temp files
+*.tmp
+*.temp
+*.swp
+
