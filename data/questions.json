@@ -1,0 +1,44 @@
+{
+  "U.S. PRESIDENTS": [
+    {"value": 100, "prompt": "This 'Father of His Country' was the first U.S. President.", "answer": "George Washington"},
+    {"value": 200, "prompt": "He authored the Declaration of Independence and was the third President.", "answer": "Thomas Jefferson"},
+    {"value": 300, "prompt": "This President's New Deal helped pull the country out of the Great Depression.", "answer": "Franklin D. Roosevelt"},
+    {"value": 400, "prompt": "He was assassinated by John Wilkes Booth at Ford's Theatre.", "answer": "Abraham Lincoln"},
+    {"value": 500, "prompt": "This President is the only one to have resigned from office.", "answer": "Richard Nixon"}
+  ],
+  "WORLD CAPITALS": [
+    {"value": 100, "prompt": "It's the capital of France.", "answer": "Paris"},
+    {"value": 200, "prompt": "This Asian metropolis is Japan's capital.", "answer": "Tokyo"},
+    {"value": 300, "prompt": "The capital of Australia, even though Sydney is bigger.", "answer": "Canberra"},
+    {"value": 400, "prompt": "This West African capital sits on the Atlantic and shares its name with the country.", "answer": "Dakar"},
+    {"value": 500, "prompt": "Renamed back from Nur-Sultan in 2022, it's the capital of Kazakhstan.", "answer": "Astana"}
+  ],
+  "SCIENCE": [
+    {"value": 100, "prompt": "This planet is known as the Red Planet.", "answer": "Mars"},
+    {"value": 200, "prompt": "H2O is the chemical formula for this substance.", "answer": "water"},
+    {"value": 300, "prompt": "This force keeps planets in orbit around the sun.", "answer": "gravity"},
+    {"value": 400, "prompt": "This particle has no electric charge and resides in the atomic nucleus.", "answer": "neutron"},
+    {"value": 500, "prompt": "Often called the 'powerhouse of the cell', it generates ATP.", "answer": "mitochondria"}
+  ],
+  "MOVIES": [
+    {"value": 100, "prompt": "In this 1977 George Lucas film, a farm boy joins a rebellion.", "answer": "Star Wars"},
+    {"value": 200, "prompt": "Tom Hanks plays a slow-witted but kind man in this 1994 film.", "answer": "Forrest Gump"},
+    {"value": 300, "prompt": "This Spielberg film features a T-Rex and cloned dinosaurs.", "answer": "Jurassic Park"},
+    {"value": 400, "prompt": "In this 1972 film, you're made an offer you can't refuse.", "answer": "The Godfather"},
+    {"value": 500, "prompt": "Bong Joon-ho's 2019 film became the first non-English Best Picture winner.", "answer": "Parasite"}
+  ],
+  "LITERATURE": [
+    {"value": 100, "prompt": "This Shakespeare play features the line 'To be or not to be'.", "answer": "Hamlet"},
+    {"value": 200, "prompt": "Harper Lee's novel about Atticus Finch and his daughter Scout.", "answer": "To Kill a Mockingbird"},
+    {"value": 300, "prompt": "Orwell's dystopia featuring Big Brother.", "answer": "1984"},
+    {"value": 400, "prompt": "Melville's novel of an obsessive whaler.", "answer": "Moby-Dick"},
+    {"value": 500, "prompt": "Garcia Marquez's novel of the Buendia family in Macondo.", "answer": "One Hundred Years of Solitude"}
+  ],
+  "SPORTS": [
+    {"value": 100, "prompt": "This sport has Wimbledon and the U.S. Open as Grand Slam events.", "answer": "tennis"},
+    {"value": 200, "prompt": "There are this many players on a soccer team on the field at once.", "answer": "11"},
+    {"value": 300, "prompt": "This basketball player won 6 NBA championships in Chicago.", "answer": "Michael Jordan"},
+    {"value": 400, "prompt": "This is the maximum score for a single visit to the oche in darts.", "answer": "180"},
+    {"value": 500, "prompt": "Equestrian, fencing, swimming, running, and shooting make up this Olympic event.", "answer": "modern pentathlon"}
+  ]
+}

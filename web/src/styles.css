@@ -1,0 +1,190 @@
+:root {
+  --jeopardy-blue: #060ce9;
+  --jeopardy-yellow: #ffcc00;
+  --bg: #000;
+  --text: #fff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.start {
+  text-align: center;
+  padding-top: 100px;
+}
+
+h1 {
+  color: var(--jeopardy-yellow);
+  letter-spacing: 4px;
+  text-align: center;
+  font-size: 56px;
+  margin: 0 0 24px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.score {
+  font-size: 32px;
+  color: var(--jeopardy-yellow);
+  font-weight: bold;
+}
+.score.negative {
+  color: #ff5555;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.category {
+  background: var(--jeopardy-blue);
+  color: var(--jeopardy-yellow);
+  text-align: center;
+  padding: 16px 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell {
+  background: var(--jeopardy-blue);
+  color: var(--jeopardy-yellow);
+  border: none;
+  font-size: 28px;
+  font-weight: bold;
+  padding: 24px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 100px;
+}
+.cell:hover:not(:disabled) {
+  background: #0a14ff;
+}
+.cell.revealed,
+.cell:disabled {
+  background: #111;
+  cursor: default;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.modal {
+  background: var(--jeopardy-blue);
+  color: var(--text);
+  padding: 32px;
+  width: min(90%, 700px);
+  text-align: center;
+}
+.clue-header {
+  color: var(--jeopardy-yellow);
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+.clue-prompt {
+  font-size: 28px;
+  margin-bottom: 24px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.modal input {
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  margin-bottom: 12px;
+  background: #fff;
+  color: #000;
+  border: none;
+}
+
+button.primary,
+.modal button,
+button.end {
+  background: var(--jeopardy-yellow);
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+}
+button.end {
+  margin-top: 16px;
+}
+
+.flash {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 64px;
+  font-weight: bold;
+  z-index: 20;
+  pointer-events: none;
+  text-shadow: 0 4px 24px #000;
+}
+.flash.correct {
+  color: #5cff5c;
+}
+.flash.incorrect {
+  color: #ff5555;
+}
+
+.finished {
+  text-align: center;
+  margin-top: 32px;
+}
+.finished h2 {
+  color: var(--jeopardy-yellow);
+}
+.error {
+  color: #ff5555;
+  margin-top: 16px;
+}
+.error-banner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3a0000;
+  color: #ff8888;
+  padding: 12px 20px;
+  border: 1px solid #ff5555;
+  font-weight: bold;
+  z-index: 30;
+  max-width: 80%;
+}

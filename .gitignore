@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# uv
+uv.lock.bak
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+
+# Temporal dev server (created by `temporal server start-dev`)
+temporal.sqlite*
+
+# Editors
+.vscode/
+.idea/
+.claude/
+*.swp
+.DS_Store
+
+# Local data
+data/results.jsonl
+
+# Env
+.env
+.env.local
