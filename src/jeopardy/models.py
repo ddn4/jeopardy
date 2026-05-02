@@ -61,9 +61,11 @@ class SubmitAnswerInput(BaseModel):
 class JudgeResult(BaseModel):
     correct: bool
     canonical_answer: str
+    reason: str | None = None
 
 
 class AnswerResult(BaseModel):
     state: PublicGameState
     judgement: Literal["correct", "incorrect"]
     canonical_answer: str
+    reason: str | None = None

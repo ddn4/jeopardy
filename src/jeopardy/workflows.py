@@ -64,8 +64,8 @@ class JeopardyGameWorkflow:
         result: JudgeResult = await workflow.execute_activity(
             judge_answer,
             args=[Clue(prompt=cell.prompt, answer=cell.answer), payload.answer],
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=RetryPolicy(maximum_attempts=1),
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=RetryPolicy(maximum_attempts=3),
         )
 
         cell.revealed = True
@@ -87,6 +87,7 @@ class JeopardyGameWorkflow:
             state=self._public_state(),
             judgement="correct" if result.correct else "incorrect",
             canonical_answer=result.canonical_answer,
+            reason=result.reason,
         )
 
     @submit_answer.validator

@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from temporalio.client import WorkflowUpdateFailedError
@@ -10,6 +11,22 @@ from jeopardy import TASK_QUEUE
 from jeopardy.activities import judge_answer, persist_result
 from jeopardy.models import Board, ClueCell, SelectClueInput, SubmitAnswerInput
 from jeopardy.workflows import JeopardyGameWorkflow
+
+
+@pytest.fixture(autouse=True)
+def mock_anthropic(monkeypatch):
+    """Default the LLM judge to 'incorrect' for any non-exact match — keeps tests offline."""
+    block = MagicMock()
+    block.type = "tool_use"
+    block.name = "record_judgement"
+    block.input = {"correct": False, "reason": "mock: incorrect"}
+    response = MagicMock()
+    response.content = [block]
+    response.stop_reason = "tool_use"
+    client = MagicMock()
+    client.messages.create = AsyncMock(return_value=response)
+    monkeypatch.setattr("jeopardy.activities._anthropic_client", client)
+    return client
 
 
 def _board(cells: dict[str, list[tuple[int, str, str]]]) -> Board:

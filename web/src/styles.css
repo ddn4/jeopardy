@@ -151,17 +151,51 @@ button.end {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 64px;
-  font-weight: bold;
+  background: rgba(0, 0, 0, 0.94);
+  border: 3px solid;
+  border-radius: 12px;
+  padding: 28px 44px;
   z-index: 20;
   pointer-events: none;
-  text-shadow: 0 4px 24px #000;
+  max-width: min(90%, 720px);
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
 }
 .flash.correct {
-  color: #5cff5c;
+  border-color: #5cff5c;
 }
 .flash.incorrect {
+  border-color: #ff5555;
+}
+.flash-headline {
+  font-size: 56px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.flash.correct .flash-headline {
+  color: #5cff5c;
+}
+.flash.incorrect .flash-headline {
   color: #ff5555;
+}
+.flash-canonical {
+  font-size: 22px;
+  margin-top: 18px;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.flash-canonical span {
+  color: var(--jeopardy-yellow);
+  font-weight: bold;
+}
+.flash-reason {
+  font-size: 19px;
+  font-weight: normal;
+  margin-top: 14px;
+  color: #d6d6d6;
+  font-style: italic;
+  line-height: 1.45;
 }
 
 .finished {

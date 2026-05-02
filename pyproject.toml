@@ -5,6 +5,7 @@ description = "Jeopardy game powered by Temporal workflows"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=0.40",
     "fastapi>=0.115",
     "pydantic>=2.7",
     "temporalio>=1.9",

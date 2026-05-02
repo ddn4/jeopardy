@@ -12,6 +12,7 @@ export type AnswerResult = {
   state: PublicGameState
   judgement: 'correct' | 'incorrect'
   canonical_answer: string
+  reason: string | null
 }
 
 const BASE = '/api'

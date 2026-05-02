@@ -1,9 +1,29 @@
 import json
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from jeopardy.activities import _normalize, judge_answer, persist_result
 from jeopardy.models import Clue, Turn
+
+
+def _tool_use_response(correct: bool, reason: str) -> MagicMock:
+    block = MagicMock()
+    block.type = "tool_use"
+    block.name = "record_judgement"
+    block.input = {"correct": correct, "reason": reason}
+    response = MagicMock()
+    response.content = [block]
+    response.stop_reason = "tool_use"
+    return response
+
+
+@pytest.fixture
+def mock_anthropic(monkeypatch):
+    client = MagicMock()
+    client.messages.create = AsyncMock()
+    monkeypatch.setattr("jeopardy.activities._anthropic_client", client)
+    return client
 
 
 class TestNormalize:
@@ -41,21 +61,64 @@ class TestNormalize:
         assert _normalize("   ") == ""
 
 
-class TestJudgeAnswer:
-    async def test_correct(self):
+class TestJudgeAnswerFastPath:
+    async def test_exact_match_returns_correct_without_llm(self, mock_anthropic):
         result = await judge_answer(Clue(prompt="...", answer="Paris"), "What is Paris?")
         assert result.correct
         assert result.canonical_answer == "Paris"
+        assert result.reason is None
+        mock_anthropic.messages.create.assert_not_called()
 
-    async def test_incorrect(self):
-        result = await judge_answer(Clue(prompt="...", answer="Paris"), "What is London?")
-        assert not result.correct
-        assert result.canonical_answer == "Paris"
-
-    async def test_canonical_answer_preserves_case(self):
+    async def test_canonical_answer_preserves_case(self, mock_anthropic):
         result = await judge_answer(Clue(prompt="...", answer="Eiffel Tower"), "eiffel tower")
         assert result.correct
         assert result.canonical_answer == "Eiffel Tower"
+        mock_anthropic.messages.create.assert_not_called()
+
+
+class TestJudgeAnswerLLMPath:
+    async def test_correct_with_reason(self, mock_anthropic):
+        mock_anthropic.messages.create.return_value = _tool_use_response(
+            True, "Accepts 'Twain' as short for 'Mark Twain'."
+        )
+        result = await judge_answer(Clue(prompt="...", answer="Mark Twain"), "Twain")
+        assert result.correct
+        assert result.canonical_answer == "Mark Twain"
+        assert result.reason == "Accepts 'Twain' as short for 'Mark Twain'."
+        mock_anthropic.messages.create.assert_called_once()
+
+    async def test_incorrect_with_reason(self, mock_anthropic):
+        mock_anthropic.messages.create.return_value = _tool_use_response(
+            False, "Lincoln was a different president."
+        )
+        result = await judge_answer(
+            Clue(prompt="...", answer="George Washington"), "Lincoln"
+        )
+        assert not result.correct
+        assert result.canonical_answer == "George Washington"
+        assert result.reason == "Lincoln was a different president."
+
+    async def test_request_uses_haiku_with_caching_and_forced_tool(self, mock_anthropic):
+        mock_anthropic.messages.create.return_value = _tool_use_response(False, "...")
+        await judge_answer(Clue(prompt="P", answer="A"), "wrong")
+
+        kwargs = mock_anthropic.messages.create.call_args.kwargs
+        assert kwargs["model"] == "claude-haiku-4-5"
+        assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+        assert kwargs["tool_choice"] == {"type": "tool", "name": "record_judgement"}
+        assert kwargs["tools"][0]["name"] == "record_judgement"
+        assert kwargs["tools"][0]["input_schema"]["additionalProperties"] is False
+
+    async def test_raises_when_response_has_no_tool_use(self, mock_anthropic):
+        text_block = MagicMock()
+        text_block.type = "text"
+        response = MagicMock()
+        response.content = [text_block]
+        response.stop_reason = "end_turn"
+        mock_anthropic.messages.create.return_value = response
+
+        with pytest.raises(RuntimeError, match="no tool_use"):
+            await judge_answer(Clue(prompt="...", answer="X"), "Y")
 
 
 class TestPersistResult:

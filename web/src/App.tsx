@@ -19,7 +19,7 @@ export function App() {
 
   useEffect(() => {
     if (!flash) return
-    const t = setTimeout(() => setFlash(null), 1500)
+    const t = setTimeout(() => setFlash(null), 4000)
     return () => clearTimeout(t)
   }, [flash])
 
@@ -98,9 +98,17 @@ export function App() {
       )}
       {flash && (
         <div className={`flash ${flash.judgement}`}>
-          {flash.judgement === 'correct'
-            ? 'Correct!'
-            : `Incorrect — ${flash.canonical_answer}`}
+          <div className="flash-headline">
+            {flash.judgement === 'correct' ? 'Correct!' : 'Incorrect'}
+          </div>
+          {flash.reason && (
+            <>
+              <div className="flash-canonical">
+                Answer: <span>{flash.canonical_answer}</span>
+              </div>
+              <div className="flash-reason">{flash.reason}</div>
+            </>
+          )}
         </div>
       )}
       {state.finished ? (
