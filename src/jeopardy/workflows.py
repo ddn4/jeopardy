@@ -4,18 +4,25 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
-    from .activities import judge_answer, persist_result, select_random_game
+    from .activities import (
+        judge_answer,
+        persist_result,
+        select_random_game,
+        select_temporal_game,
+    )
     from .models import (
         AnswerResult,
         Board,
         Clue,
         ClueCell,
         CurrentClue,
+        GameMode,
         JudgeResult,
         PublicBoard,
         PublicClueCell,
         PublicGameState,
         SelectClueInput,
+        StartGameInput,
         SubmitAnswerInput,
         Turn,
     )
@@ -24,7 +31,8 @@ with workflow.unsafe.imports_passed_through():
 @workflow.defn
 class JeopardyGameWorkflow:
     @workflow.init
-    def __init__(self) -> None:
+    def __init__(self, input: StartGameInput) -> None:
+        self.mode: GameMode = input.mode
         self.board: Board | None = None
         self.score: int = 0
         self.current_clue: CurrentClue | None = None
@@ -32,9 +40,10 @@ class JeopardyGameWorkflow:
         self.finished: bool = False
 
     @workflow.run
-    async def run(self) -> int:
+    async def run(self, input: StartGameInput) -> int:
+        loader = select_temporal_game if self.mode == "temporal" else select_random_game
         self.board = await workflow.execute_activity(
-            select_random_game,
+            loader,
             start_to_close_timeout=timedelta(seconds=15),
             retry_policy=RetryPolicy(maximum_attempts=3),
         )

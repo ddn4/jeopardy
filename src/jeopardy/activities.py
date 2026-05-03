@@ -20,7 +20,7 @@ _games_index: list[Board] | None = None
 
 
 def _unescape(s: str) -> str:
-    """Strip SQL-export-style backslash escapes left in the source TSV."""
+    # Strip SQL-export-style backslash escapes left in the source TSV.
     return s.replace('\\"', '"').replace("\\'", "'")
 
 
@@ -72,6 +72,22 @@ async def select_random_game() -> Board:
     if _games_index is None:
         _games_index = _load_games_index()
     return random.choice(_games_index)
+
+
+@activity.defn
+async def select_temporal_game() -> Board:
+    """Load the curated Temporal-themed board from data/temporal.json."""
+    raw = json.loads((DATA_DIR / "temporal.json").read_text())
+    return Board(
+        categories={
+            cat: [
+                ClueCell(value=c["value"], prompt=c["prompt"], answer=c["answer"])
+                for c in cells
+            ]
+            for cat, cells in raw.items()
+        }
+    )
+
 
 _JUDGE_MODEL = "claude-haiku-4-5"
 

@@ -10,7 +10,13 @@ from temporalio.worker import Worker
 
 from jeopardy import TASK_QUEUE
 from jeopardy.activities import judge_answer, persist_result
-from jeopardy.models import Board, ClueCell, SelectClueInput, SubmitAnswerInput
+from jeopardy.models import (
+    Board,
+    ClueCell,
+    SelectClueInput,
+    StartGameInput,
+    SubmitAnswerInput,
+)
 from jeopardy.workflows import JeopardyGameWorkflow
 
 
@@ -40,13 +46,17 @@ def _board(cells: dict[str, list[tuple[int, str, str]]]) -> Board:
 
 
 class _BoardInjector:
-    """Holds the next Board to return from select_random_game."""
+    """Holds the next Board to return from select_random_game / select_temporal_game."""
 
     def __init__(self) -> None:
-        self.board: Board | None = None
+        self.random: Board | None = None
+        self.temporal: Board | None = None
 
     def set(self, board: Board) -> None:
-        self.board = board
+        self.random = board
+
+    def set_temporal(self, board: Board) -> None:
+        self.temporal = board
 
 
 @pytest.fixture
@@ -56,8 +66,13 @@ async def worker(monkeypatch, tmp_path):
 
     @activity.defn(name="select_random_game")
     async def fake_select_random_game() -> Board:
-        assert injector.board is not None, "test must call injector.set(board) before _start"
-        return injector.board
+        assert injector.random is not None, "test must call injector.set(board) before _start"
+        return injector.random
+
+    @activity.defn(name="select_temporal_game")
+    async def fake_select_temporal_game() -> Board:
+        assert injector.temporal is not None, "test must call injector.set_temporal(board) first"
+        return injector.temporal
 
     async with await WorkflowEnvironment.start_local(
         data_converter=pydantic_data_converter,
@@ -66,16 +81,25 @@ async def worker(monkeypatch, tmp_path):
             env.client,
             task_queue=TASK_QUEUE,
             workflows=[JeopardyGameWorkflow],
-            activities=[judge_answer, persist_result, fake_select_random_game],
+            activities=[
+                judge_answer,
+                persist_result,
+                fake_select_random_game,
+                fake_select_temporal_game,
+            ],
         ):
             yield env, injector
 
 
-async def _start(worker_ctx, board: Board):
+async def _start(worker_ctx, board: Board, mode: str = "random"):
     env, injector = worker_ctx
-    injector.set(board)
+    if mode == "temporal":
+        injector.set_temporal(board)
+    else:
+        injector.set(board)
     handle = await env.client.start_workflow(
         JeopardyGameWorkflow.run,
+        StartGameInput(mode=mode),
         id=f"test-{uuid.uuid4().hex[:8]}",
         task_queue=TASK_QUEUE,
     )
@@ -237,6 +261,26 @@ async def test_wait_until_ready_returns_loaded_board(worker):
     assert state.score == 0
     assert state.current_clue is None
     assert not state.finished
+
+
+async def test_temporal_mode_uses_temporal_activity(worker):
+    random_board = _board({"R": [(100, "p", "a")]})
+    temporal_board = _board(
+        {"WORKFLOWS": [(100, "temporal prompt", "Workflow Definition")]}
+    )
+    env, injector = worker
+    injector.set(random_board)
+    injector.set_temporal(temporal_board)
+
+    handle = await env.client.start_workflow(
+        JeopardyGameWorkflow.run,
+        StartGameInput(mode="temporal"),
+        id=f"test-{uuid.uuid4().hex[:8]}",
+        task_queue=TASK_QUEUE,
+    )
+    state = await handle.execute_update(JeopardyGameWorkflow.wait_until_ready)
+    assert "WORKFLOWS" in state.board.categories
+    assert "R" not in state.board.categories
 
 
 async def test_score_accumulates_across_turns(worker):

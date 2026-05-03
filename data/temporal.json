@@ -1,0 +1,44 @@
+{
+  "TEMPORAL CORE CONCEPTS": [
+    {"value": 100, "prompt": "Temporal calls itself a runtime for durable executions of these reentrant, resumable functions.", "answer": "Workflows"},
+    {"value": 200, "prompt": "This guarantee — that workflow state survives crashes and resumes from the last checkpoint — is Temporal's headline feature.", "answer": "Durable Execution"},
+    {"value": 300, "prompt": "The Temporal Server is written in this language created at Google.", "answer": "Go"},
+    {"value": 400, "prompt": "Temporal was forked from this earlier open-source project at Uber, started by the same founders.", "answer": "Cadence"},
+    {"value": 500, "prompt": "Unlike a regular task error, this kind of error fails the entire Workflow Execution rather than just the current task.", "answer": "a Temporal Failure"}
+  ],
+  "WORKFLOWS": [
+    {"value": 100, "prompt": "Your code that describes what a Workflow does is called this.", "answer": "a Workflow Definition"},
+    {"value": 200, "prompt": "In Temporal's Python SDK, this is the decorator that marks a class as a Workflow.", "answer": "@workflow.defn"},
+    {"value": 300, "prompt": "This technique restarts a long-running Workflow with a fresh, empty event history.", "answer": "Continue-As-New"},
+    {"value": 400, "prompt": "These three message types let outside callers fire-and-forget data to a Workflow, read its state, and invoke a request/response handler respectively.", "answer": "Signals, Queries, and Updates"},
+    {"value": 500, "prompt": "For replay to work correctly, every Workflow must be this — meaning no random numbers, wall-clock reads, or unguarded I/O.", "answer": "deterministic"}
+  ],
+  "ACTIVITIES & RETRIES": [
+    {"value": 100, "prompt": "Calling a remote API, sending an email, or hitting a database belongs in one of these — not directly in a Workflow.", "answer": "an Activity"},
+    {"value": 200, "prompt": "Long-running Activities periodically send one of these to prove they're still alive and to checkpoint progress.", "answer": "a Heartbeat"},
+    {"value": 300, "prompt": "The default Backoff Coefficient on a Temporal Retry Policy is this number.", "answer": "2.0"},
+    {"value": 400, "prompt": "This Retry Policy field caps the total number of attempts before Temporal gives up.", "answer": "Maximum Attempts"},
+    {"value": 500, "prompt": "Errors whose 'type' matches an entry on this Retry Policy list will skip retries entirely.", "answer": "non-retryable error types"}
+  ],
+  "WORKERS & TASK QUEUES": [
+    {"value": 100, "prompt": "These long-running processes poll Temporal for work and run your Workflow and Activity code.", "answer": "Workers"},
+    {"value": 200, "prompt": "A Worker subscribes to one of these named queues to receive its assignments from the Temporal Service.", "answer": "a Task Queue"},
+    {"value": 300, "prompt": "There are two kinds dispensed by a Task Queue: one advances a Workflow's history, the other runs business logic.", "answer": "Tasks"},
+    {"value": 400, "prompt": "This Worker optimization keeps a Workflow's tasks routed to the Worker that already has its state cached.", "answer": "Sticky Execution"},
+    {"value": 500, "prompt": "Backed by Build IDs, this opt-in feature lets you safely roll out incompatible Worker code while old Workflows finish on the old version.", "answer": "Worker Versioning"}
+  ],
+  "DURABILITY & REPLAY": [
+    {"value": 100, "prompt": "This durable, append-only log records every step a Workflow has taken.", "answer": "the Event History"},
+    {"value": 200, "prompt": "When a Worker crashes mid-Workflow, the next Worker does this — walking back through the event history to reconstruct state.", "answer": "Replay"},
+    {"value": 300, "prompt": "Within a namespace, this user-supplied string uniquely identifies a single Workflow Execution.", "answer": "a Workflow ID"},
+    {"value": 400, "prompt": "Temporal partitions workflows into these tenant-like logical isolation units, each with its own retention and search attributes.", "answer": "Namespaces"},
+    {"value": 500, "prompt": "Searchable workflow metadata — like custom 'status' or 'orderId' attributes — gets indexed into this secondary store, often backed by Elasticsearch.", "answer": "Visibility"}
+  ],
+  "THE TEMPORAL TOOLBOX": [
+    {"value": 100, "prompt": "Brewable as `temporal`, this command-line tool starts a local dev server and queries workflows.", "answer": "the Temporal CLI"},
+    {"value": 200, "prompt": "By default, the Temporal Web UI listens on this port when you run `temporal server start-dev`.", "answer": "8233"},
+    {"value": 300, "prompt": "Available in Go, Java, TypeScript, Python, .NET, PHP, and Ruby, these libraries connect your application code to the Temporal Service.", "answer": "SDKs"},
+    {"value": 400, "prompt": "Before the unified `temporal` CLI, this older Java-based admin tool was Temporal's primary command-line interface.", "answer": "tctl"},
+    {"value": 500, "prompt": "By default, `temporal server start-dev` persists state to a single file using this embedded SQL database.", "answer": "SQLite"}
+  ]
+}
