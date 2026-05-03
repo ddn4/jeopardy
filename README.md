@@ -59,12 +59,12 @@ Then open http://localhost:5173.
 jeopardy/
 ├── pyproject.toml
 ├── data/
-│   └── questions.json        # seed clues (6 categories × 5 values)
+│   └── all_questions.tsv     # archive of real Jeopardy clues (rounds 1, 2, 3)
 ├── src/jeopardy/
 │   ├── models.py             # pydantic types (state, updates, results)
 │   ├── workflows.py          # JeopardyGameWorkflow (updates + query)
-│   ├── activities.py         # judge_answer, persist_result
-│   ├── api.py                # FastAPI gateway (loads board, calls updates)
+│   ├── activities.py         # select_random_game, judge_answer, persist_result
+│   ├── api.py                # FastAPI gateway (calls workflow updates)
 │   └── worker.py             # worker entrypoint
 └── web/
     └── src/
@@ -79,8 +79,10 @@ Player actions are **workflow updates** — request-reply RPCs that mutate
 state and return the new state synchronously. The frontend never polls; it
 just stores whatever each update returned.
 
-1. `POST /games` → API reads `data/questions.json`, starts a
-   `JeopardyGameWorkflow` with the `Board` as input, and returns the initial
+1. `POST /games` → API starts a `JeopardyGameWorkflow`. The workflow's first
+   step calls the `select_random_game` activity, which picks a random complete
+   6×5 round-1 board from `data/all_questions.tsv`.
+   The API blocks on the `wait_until_ready` update and returns the initial
    `PublicGameState`. Workflow id is stored in the URL hash so refresh resumes.
 2. Click a cell → `POST /games/{id}/select` → `select_clue` update returns
    the state with `current_clue` set.
@@ -97,9 +99,9 @@ signal, query, activity, and timer is recorded.
 
 ## Customizing
 
-- **Replace clues**: edit `data/questions.json`. Categories must each have the
-  same set of values; the board renders a 6×5 grid by default.
-- **Smarter judging**: `judge_answer` in `activities.py` is a normalized
-  string match. Swap it for an LLM call without touching the workflow.
-- **Multiplayer**: extend the workflow to track multiple player scores and
-  add buzz-in coordination via additional signals + a `wait_condition` race.
+- **Different clues**: every new game samples a complete 6×5 board from
+  `data/all_questions.tsv`. The first call to `select_random_game` parses the
+  TSV (~1s) and caches the index of valid boards in worker memory.
+- **Tweak judging**: `judge_answer` in `activities.py` does a fast normalized
+  string match, then falls back to an Anthropic LLM (`claude-haiku-4-5`) for
+  fuzzy correctness with a one-sentence reason.

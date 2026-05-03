@@ -3,7 +3,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from jeopardy.activities import _normalize, judge_answer, persist_result
+from jeopardy import activities
+from jeopardy.activities import (
+    _normalize,
+    judge_answer,
+    persist_result,
+    select_random_game,
+)
 from jeopardy.models import Clue, Turn
 
 
@@ -119,6 +125,144 @@ class TestJudgeAnswerLLMPath:
 
         with pytest.raises(RuntimeError, match="no tool_use"):
             await judge_answer(Clue(prompt="...", answer="X"), "Y")
+
+
+_TSV_HEADER = "round\tclue_value\tdaily_double_value\tcategory\tcomments\tanswer\tquestion\tair_date\tnotes\n"
+
+
+def _tsv_row(round_: int, value: int, category: str, prompt: str, answer: str, date: str) -> str:
+    return f"{round_}\t{value}\t0\t{category}\t\t{prompt}\t{answer}\t{date}\t\n"
+
+
+def _full_round(round_: int, date: str, value_set: list[int]) -> str:
+    """Build a complete 6-cat × 5-clue round."""
+    rows = []
+    for ci in range(6):
+        cat = f"CAT{ci}-{date}-{round_}"
+        for v in value_set:
+            rows.append(_tsv_row(round_, v, cat, f"prompt {cat} {v}", f"answer {cat} {v}", date))
+    return "".join(rows)
+
+
+@pytest.fixture
+def reset_games_index(monkeypatch):
+    monkeypatch.setattr(activities, "_games_index", None)
+
+
+class TestSelectRandomGame:
+    async def test_returns_complete_6x5_board(self, tmp_path, monkeypatch, reset_games_index):
+        tsv = _TSV_HEADER + _full_round(1, "1990-01-01", [100, 200, 300, 400, 500])
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        assert len(board.categories) == 6
+        for cells in board.categories.values():
+            assert [c.value for c in cells] == [100, 200, 300, 400, 500]
+
+    async def test_skips_round_3(self, tmp_path, monkeypatch, reset_games_index):
+        tsv = (
+            _TSV_HEADER
+            + _full_round(1, "1990-01-01", [100, 200, 300, 400, 500])
+            + _tsv_row(3, 0, "FINAL", "final prompt", "final answer", "1990-01-01")
+        )
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        assert "FINAL" not in board.categories
+
+    async def test_skips_incomplete_round(self, tmp_path, monkeypatch, reset_games_index):
+        # incomplete (5 cats only) + complete — should pick the complete one
+        incomplete = "".join(
+            _tsv_row(1, v, f"BAD{ci}", "p", "a", "1991-01-01")
+            for ci in range(5)
+            for v in [100, 200, 300, 400, 500]
+        )
+        tsv = _TSV_HEADER + incomplete + _full_round(1, "1992-01-01", [100, 200, 300, 400, 500])
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        assert all(not cat.startswith("BAD") for cat in board.categories)
+
+    async def test_skips_mismatched_value_set(self, tmp_path, monkeypatch, reset_games_index):
+        # 6 cats but mixed value sets per category — should be excluded
+        bad = "".join(
+            _tsv_row(1, v, f"MIX{ci}", "p", "a", "1993-01-01")
+            for ci in range(6)
+            for v in ([100, 200, 300, 400, 500] if ci < 3 else [200, 400, 600, 800, 1000])
+        )
+        tsv = _TSV_HEADER + bad + _full_round(1, "1994-01-01", [200, 400, 600, 800, 1000])
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        assert all(not cat.startswith("MIX") for cat in board.categories)
+
+    async def test_skips_round_2(self, tmp_path, monkeypatch, reset_games_index):
+        # round-2 board is well-formed but should not be selected
+        tsv = (
+            _TSV_HEADER
+            + _full_round(1, "1990-01-01", [100, 200, 300, 400, 500])
+            + _full_round(2, "1990-01-01", [400, 800, 1200, 1600, 2000])
+        )
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        for _ in range(20):
+            board = await select_random_game()
+            for cells in board.categories.values():
+                assert [c.value for c in cells] == [100, 200, 300, 400, 500]
+
+    async def test_caches_index_across_calls(self, tmp_path, monkeypatch, reset_games_index):
+        tsv = _TSV_HEADER + _full_round(1, "1990-01-01", [100, 200, 300, 400, 500])
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        call_count = 0
+        real_loader = activities._load_games_index
+
+        def counting_loader():
+            nonlocal call_count
+            call_count += 1
+            return real_loader()
+
+        monkeypatch.setattr(activities, "_load_games_index", counting_loader)
+        await select_random_game()
+        await select_random_game()
+        await select_random_game()
+        assert call_count == 1
+
+    async def test_strips_export_escapes(self, tmp_path, monkeypatch, reset_games_index):
+        # The source TSV has SQL-export escapes like \" and \' baked into text fields.
+        rows = [
+            _tsv_row(1, v, "\\'50'S TV", f'\\"prompt {v}\\"', f"answer\\'s {v}", "1990-01-01")
+            for v in [100, 200, 300, 400, 500]
+        ]
+        # Pad to 6 categories so the round qualifies as complete.
+        for ci in range(5):
+            for v in [100, 200, 300, 400, 500]:
+                rows.append(_tsv_row(1, v, f"FILLER{ci}", "p", "a", "1990-01-01"))
+        (tmp_path / "all_questions.tsv").write_text(_TSV_HEADER + "".join(rows))
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        assert "'50'S TV" in board.categories
+        cell = board.categories["'50'S TV"][0]
+        assert cell.prompt == '"prompt 100"'
+        assert cell.answer == "answer's 100"
+
+    async def test_maps_tsv_columns_to_clue_cell(self, tmp_path, monkeypatch, reset_games_index):
+        # TSV "answer" -> ClueCell.prompt; TSV "question" -> ClueCell.answer
+        tsv = _TSV_HEADER + _full_round(1, "1990-01-01", [100, 200, 300, 400, 500])
+        (tmp_path / "all_questions.tsv").write_text(tsv)
+        monkeypatch.setattr(activities, "DATA_DIR", tmp_path)
+
+        board = await select_random_game()
+        any_cell = next(iter(board.categories.values()))[0]
+        assert any_cell.prompt.startswith("prompt ")
+        assert any_cell.answer.startswith("answer ")
 
 
 class TestPersistResult:

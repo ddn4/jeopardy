@@ -1,13 +1,77 @@
+import csv
 import json
+import random
 import re
+from collections import defaultdict
 from pathlib import Path
 
 from anthropic import AsyncAnthropic
 from temporalio import activity
 
-from .models import Clue, JudgeResult, Turn
+from .models import Board, Clue, ClueCell, JudgeResult, Turn
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+
+_ROUND_VALUE_SETS: dict[str, tuple[frozenset[int], ...]] = {
+    "1": (frozenset({100, 200, 300, 400, 500}), frozenset({200, 400, 600, 800, 1000})),
+}
+
+_games_index: list[Board] | None = None
+
+
+def _unescape(s: str) -> str:
+    """Strip SQL-export-style backslash escapes left in the source TSV."""
+    return s.replace('\\"', '"').replace("\\'", "'")
+
+
+def _load_games_index() -> list[Board]:
+    """Parse all_questions.tsv, return complete 6x5 Boards from round 1 only.
+
+    The TSV uses Jeopardy's native naming: column `answer` is the host's prompt
+    and column `question` is the contestant's response — the inverse of our
+    ClueCell.prompt / ClueCell.answer.
+    """
+    rounds: dict[tuple[str, str], dict[str, dict[int, ClueCell]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
+    with (DATA_DIR / "all_questions.tsv").open() as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            if row["round"] not in _ROUND_VALUE_SETS:
+                continue
+            value = int(row["clue_value"])
+            category = _unescape(row["category"])
+            rounds[(row["air_date"], row["round"])][category][value] = ClueCell(
+                value=value,
+                prompt=_unescape(row["answer"]),
+                answer=_unescape(row["question"]),
+            )
+
+    boards: list[Board] = []
+    for (_date, rnd), cats in rounds.items():
+        if len(cats) != 6:
+            continue
+        cat_value_sets = [frozenset(cells.keys()) for cells in cats.values()]
+        if len(set(cat_value_sets)) != 1:
+            continue
+        if cat_value_sets[0] not in _ROUND_VALUE_SETS[rnd]:
+            continue
+        boards.append(
+            Board(
+                categories={
+                    cat: sorted(cells.values(), key=lambda c: c.value)
+                    for cat, cells in cats.items()
+                }
+            )
+        )
+    return boards
+
+
+@activity.defn
+async def select_random_game() -> Board:
+    global _games_index
+    if _games_index is None:
+        _games_index = _load_games_index()
+    return random.choice(_games_index)
 
 _JUDGE_MODEL = "claude-haiku-4-5"
 

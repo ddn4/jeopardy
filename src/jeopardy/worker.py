@@ -5,7 +5,7 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
 from . import TASK_QUEUE
-from .activities import judge_answer, persist_result
+from .activities import judge_answer, persist_result, select_random_game
 from .workflows import JeopardyGameWorkflow
 
 
@@ -18,7 +18,7 @@ async def main() -> None:
         client,
         task_queue=TASK_QUEUE,
         workflows=[JeopardyGameWorkflow],
-        activities=[judge_answer, persist_result],
+        activities=[judge_answer, persist_result, select_random_game],
     )
     print(f"Worker ready, polling task queue '{TASK_QUEUE}'", flush=True)
     await worker.run()

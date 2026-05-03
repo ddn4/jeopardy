@@ -4,7 +4,7 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
-    from .activities import judge_answer, persist_result
+    from .activities import judge_answer, persist_result, select_random_game
     from .models import (
         AnswerResult,
         Board,
@@ -24,17 +24,27 @@ with workflow.unsafe.imports_passed_through():
 @workflow.defn
 class JeopardyGameWorkflow:
     @workflow.init
-    def __init__(self, board: Board) -> None:
-        self.board: Board = board
+    def __init__(self) -> None:
+        self.board: Board | None = None
         self.score: int = 0
         self.current_clue: CurrentClue | None = None
         self.history: list[Turn] = []
         self.finished: bool = False
 
     @workflow.run
-    async def run(self, board: Board) -> int:
+    async def run(self) -> int:
+        self.board = await workflow.execute_activity(
+            select_random_game,
+            start_to_close_timeout=timedelta(seconds=15),
+            retry_policy=RetryPolicy(maximum_attempts=3),
+        )
         await workflow.wait_condition(lambda: self.finished)
         return self.score
+
+    @workflow.update
+    async def wait_until_ready(self) -> PublicGameState:
+        await workflow.wait_condition(lambda: self.board is not None)
+        return self._public_state()
 
     @workflow.update
     async def select_clue(self, payload: SelectClueInput) -> PublicGameState:
@@ -47,6 +57,8 @@ class JeopardyGameWorkflow:
 
     @select_clue.validator
     def _validate_select_clue(self, payload: SelectClueInput) -> None:
+        if self.board is None:
+            raise ValueError("game still loading")
         if self.finished:
             raise ValueError("game already finished")
         if self.current_clue is not None:
@@ -59,7 +71,9 @@ class JeopardyGameWorkflow:
 
     @workflow.update
     async def submit_answer(self, payload: SubmitAnswerInput) -> AnswerResult:
+        assert self.current_clue is not None
         cell = self._cell(self.current_clue.category, self.current_clue.value)
+        assert cell is not None
 
         result: JudgeResult = await workflow.execute_activity(
             judge_answer,
@@ -92,6 +106,8 @@ class JeopardyGameWorkflow:
 
     @submit_answer.validator
     def _validate_submit_answer(self, payload: SubmitAnswerInput) -> None:
+        if self.board is None:
+            raise ValueError("game still loading")
         if self.finished:
             raise ValueError("game already finished")
         if self.current_clue is None:
@@ -118,24 +134,31 @@ class JeopardyGameWorkflow:
         self.finished = True
 
     def _public_state(self) -> PublicGameState:
+        categories: dict[str, list[PublicClueCell]] = (
+            {}
+            if self.board is None
+            else {
+                cat: [PublicClueCell(value=c.value, revealed=c.revealed) for c in cells]
+                for cat, cells in self.board.categories.items()
+            }
+        )
         return PublicGameState(
             game_id=workflow.info().workflow_id,
-            board=PublicBoard(
-                categories={
-                    cat: [PublicClueCell(value=c.value, revealed=c.revealed) for c in cells]
-                    for cat, cells in self.board.categories.items()
-                }
-            ),
+            board=PublicBoard(categories=categories),
             score=self.score,
             current_clue=self.current_clue,
             finished=self.finished,
         )
 
     def _cell(self, category: str, value: int) -> ClueCell | None:
+        if self.board is None:
+            return None
         for c in self.board.categories.get(category, []):
             if c.value == value:
                 return c
         return None
 
     def _board_complete(self) -> bool:
+        if self.board is None:
+            return False
         return all(c.revealed for cells in self.board.categories.values() for c in cells)

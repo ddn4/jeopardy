@@ -1,4 +1,3 @@
-import json
 import uuid
 from contextlib import asynccontextmanager
 
@@ -9,11 +8,8 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.exceptions import ApplicationError
 
 from . import TASK_QUEUE
-from .activities import DATA_DIR
 from .models import (
     AnswerResult,
-    Board,
-    ClueCell,
     PublicGameState,
     SelectClueInput,
     SubmitAnswerInput,
@@ -31,16 +27,6 @@ async def _get_client() -> Client:
             data_converter=pydantic_data_converter,
         )
     return _client
-
-
-def _load_board() -> Board:
-    raw = json.loads((DATA_DIR / "questions.json").read_text())
-    return Board(
-        categories={
-            cat: [ClueCell(value=c["value"], prompt=c["prompt"], answer=c["answer"]) for c in cells]
-            for cat, cells in raw.items()
-        }
-    )
 
 
 @asynccontextmanager
@@ -70,11 +56,10 @@ async def create_game() -> PublicGameState:
     game_id = f"game-{uuid.uuid4().hex[:8]}"
     handle = await client.start_workflow(
         JeopardyGameWorkflow.run,
-        _load_board(),
         id=game_id,
         task_queue=TASK_QUEUE,
     )
-    return await handle.query(JeopardyGameWorkflow.get_state)
+    return await handle.execute_update(JeopardyGameWorkflow.wait_until_ready)
 
 
 @app.get("/games/{game_id}")

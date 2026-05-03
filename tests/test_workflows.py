@@ -2,6 +2,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from temporalio import activity
 from temporalio.client import WorkflowUpdateFailedError
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
@@ -38,9 +39,26 @@ def _board(cells: dict[str, list[tuple[int, str, str]]]) -> Board:
     )
 
 
+class _BoardInjector:
+    """Holds the next Board to return from select_random_game."""
+
+    def __init__(self) -> None:
+        self.board: Board | None = None
+
+    def set(self, board: Board) -> None:
+        self.board = board
+
+
 @pytest.fixture
 async def worker(monkeypatch, tmp_path):
     monkeypatch.setattr("jeopardy.activities.DATA_DIR", tmp_path)
+    injector = _BoardInjector()
+
+    @activity.defn(name="select_random_game")
+    async def fake_select_random_game() -> Board:
+        assert injector.board is not None, "test must call injector.set(board) before _start"
+        return injector.board
+
     async with await WorkflowEnvironment.start_local(
         data_converter=pydantic_data_converter,
     ) as env:
@@ -48,18 +66,21 @@ async def worker(monkeypatch, tmp_path):
             env.client,
             task_queue=TASK_QUEUE,
             workflows=[JeopardyGameWorkflow],
-            activities=[judge_answer, persist_result],
+            activities=[judge_answer, persist_result, fake_select_random_game],
         ):
-            yield env
+            yield env, injector
 
 
-async def _start(env, board: Board):
-    return await env.client.start_workflow(
+async def _start(worker_ctx, board: Board):
+    env, injector = worker_ctx
+    injector.set(board)
+    handle = await env.client.start_workflow(
         JeopardyGameWorkflow.run,
-        board,
         id=f"test-{uuid.uuid4().hex[:8]}",
         task_queue=TASK_QUEUE,
     )
+    await handle.execute_update(JeopardyGameWorkflow.wait_until_ready)
+    return handle
 
 
 async def test_correct_answer_increments_score(worker):
@@ -205,6 +226,17 @@ async def test_empty_answer_rejected(worker):
         await handle.execute_update(
             JeopardyGameWorkflow.submit_answer, SubmitAnswerInput(answer="   ")
         )
+
+
+async def test_wait_until_ready_returns_loaded_board(worker):
+    board = _board({"X": [(100, "p1", "a1"), (200, "p2", "a2")], "Y": [(100, "p", "a")]})
+    handle = await _start(worker, board)
+
+    state = await handle.execute_update(JeopardyGameWorkflow.wait_until_ready)
+    assert set(state.board.categories.keys()) == {"X", "Y"}
+    assert state.score == 0
+    assert state.current_clue is None
+    assert not state.finished
 
 
 async def test_score_accumulates_across_turns(worker):
