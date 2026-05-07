@@ -32,6 +32,7 @@ temporal.sqlite*
 
 # Local data
 data/results.jsonl
+data/jeopardy.sqlite
 
 # Env
 .env

@@ -41,11 +41,15 @@ class JeopardyGameWorkflow:
 
     @workflow.run
     async def run(self, input: StartGameInput) -> int:
+        workflow.logger.info("starting game mode=%s", self.mode)
         loader = select_temporal_game if self.mode == "temporal" else select_random_game
         self.board = await workflow.execute_activity(
             loader,
             start_to_close_timeout=timedelta(seconds=15),
             retry_policy=RetryPolicy(maximum_attempts=3),
+        )
+        workflow.logger.info(
+            "board loaded categories=%s", list(self.board.categories.keys())
         )
         await workflow.wait_condition(lambda: self.finished)
         return self.score
@@ -61,6 +65,9 @@ class JeopardyGameWorkflow:
         assert cell is not None
         self.current_clue = CurrentClue(
             category=payload.category, value=payload.value, prompt=cell.prompt
+        )
+        workflow.logger.info(
+            "clue selected category=%s value=%d", payload.category, payload.value
         )
         return self._public_state()
 
@@ -93,6 +100,9 @@ class JeopardyGameWorkflow:
 
         cell.revealed = True
         self.score += cell.value if result.correct else -cell.value
+        workflow.logger.info(
+            "answer judged correct=%s score=%d", result.correct, self.score
+        )
         self.history.append(
             Turn(
                 category=self.current_clue.category,
@@ -141,6 +151,9 @@ class JeopardyGameWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
         )
         self.finished = True
+        workflow.logger.info(
+            "game finalized score=%d turns=%d", self.score, len(self.history)
+        )
 
     def _public_state(self) -> PublicGameState:
         categories: dict[str, list[PublicClueCell]] = (

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
@@ -15,6 +16,10 @@ from .workflows import JeopardyGameWorkflow
 
 
 async def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     client = await Client.connect(
         "localhost:7233",
         data_converter=pydantic_data_converter,

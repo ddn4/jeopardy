@@ -71,14 +71,19 @@ async def select_random_game() -> Board:
     global _games_index
     if _games_index is None:
         _games_index = _load_games_index()
-    return random.choice(_games_index)
+        activity.logger.info("loaded games index size=%d", len(_games_index))
+    board = random.choice(_games_index)
+    activity.logger.info(
+        "selected board categories=%s", list(board.categories.keys())
+    )
+    return board
 
 
 @activity.defn
 async def select_temporal_game() -> Board:
     """Load the curated Temporal-themed board from data/temporal.json."""
     raw = json.loads((DATA_DIR / "temporal.json").read_text())
-    return Board(
+    board = Board(
         categories={
             cat: [
                 ClueCell(value=c["value"], prompt=c["prompt"], answer=c["answer"])
@@ -87,6 +92,10 @@ async def select_temporal_game() -> Board:
             for cat, cells in raw.items()
         }
     )
+    activity.logger.info(
+        "loaded temporal board categories=%s", list(board.categories.keys())
+    )
+    return board
 
 
 _JUDGE_MODEL = "claude-haiku-4-5"
@@ -144,6 +153,7 @@ def _normalize(s: str) -> str:
 @activity.defn
 async def judge_answer(clue: Clue, user_answer: str) -> JudgeResult:
     if _normalize(user_answer) == _normalize(clue.answer):
+        activity.logger.info("fast-match correct")
         return JudgeResult(correct=True, canonical_answer=clue.answer, reason=None)
 
     client = _get_anthropic_client()
@@ -175,6 +185,11 @@ async def judge_answer(clue: Clue, user_answer: str) -> JudgeResult:
     for block in response.content:
         if block.type == "tool_use" and block.name == "record_judgement":
             data = block.input
+            activity.logger.info(
+                "llm judgement correct=%s reason=%s",
+                data["correct"],
+                data.get("reason"),
+            )
             return JudgeResult(
                 correct=bool(data["correct"]),
                 canonical_answer=clue.answer,
@@ -195,3 +210,4 @@ async def persist_result(game_id: str, score: int, history: list[Turn]) -> None:
     }
     with (DATA_DIR / "results.jsonl").open("a") as f:
         f.write(json.dumps(payload) + "\n")
+    activity.logger.info("persisted result game_id=%s score=%d", game_id, score)
