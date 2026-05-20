@@ -26,12 +26,6 @@ body {
   text-align: center;
   padding-top: 100px;
 }
-.start-buttons {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
 
 h1 {
   color: var(--jeopardy-yellow);

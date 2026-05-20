@@ -35,14 +35,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
-export type GameMode = 'random' | 'temporal'
-
 export const api = {
-  createGame: (mode: GameMode = 'random') =>
-    req<PublicGameState>('/games', {
-      method: 'POST',
-      body: JSON.stringify({ mode }),
-    }),
+  createGame: () => req<PublicGameState>('/games', { method: 'POST' }),
   getGame: (id: string) => req<PublicGameState>(`/games/${id}`),
   selectClue: (id: string, category: string, value: number) =>
     req<PublicGameState>(`/games/${id}/select`, {

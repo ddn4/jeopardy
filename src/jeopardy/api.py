@@ -12,7 +12,6 @@ from .models import (
     AnswerResult,
     PublicGameState,
     SelectClueInput,
-    StartGameInput,
     SubmitAnswerInput,
 )
 from .workflows import JeopardyGameWorkflow
@@ -52,12 +51,11 @@ async def health() -> dict[str, str]:
 
 
 @app.post("/games")
-async def create_game(payload: StartGameInput | None = None) -> PublicGameState:
+async def create_game() -> PublicGameState:
     client = await _get_client()
     game_id = f"game-{uuid.uuid4().hex[:8]}"
     handle = await client.start_workflow(
         JeopardyGameWorkflow.run,
-        payload or StartGameInput(),
         id=game_id,
         task_queue=TASK_QUEUE,
     )

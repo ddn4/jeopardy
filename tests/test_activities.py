@@ -9,7 +9,6 @@ from jeopardy.activities import (
     judge_answer,
     persist_result,
     select_random_game,
-    select_temporal_game,
 )
 from jeopardy.models import Clue, Turn
 
@@ -264,36 +263,6 @@ class TestSelectRandomGame:
         any_cell = next(iter(board.categories.values()))[0]
         assert any_cell.prompt.startswith("prompt ")
         assert any_cell.answer.startswith("answer ")
-
-
-class TestSelectTemporalGame:
-    async def test_loads_curated_board_from_json(self, tmp_path, monkeypatch):
-        seed = {
-            "WORKFLOWS": [
-                {"value": v, "prompt": f"p{v}", "answer": f"a{v}"}
-                for v in [100, 200, 300, 400, 500]
-            ],
-            "ACTIVITIES": [
-                {"value": v, "prompt": f"q{v}", "answer": f"b{v}"}
-                for v in [100, 200, 300, 400, 500]
-            ],
-        }
-        (tmp_path / "temporal.json").write_text(json.dumps(seed))
-        monkeypatch.setattr("jeopardy.activities.DATA_DIR", tmp_path)
-
-        board = await select_temporal_game()
-        assert set(board.categories.keys()) == {"WORKFLOWS", "ACTIVITIES"}
-        wf = board.categories["WORKFLOWS"]
-        assert [c.value for c in wf] == [100, 200, 300, 400, 500]
-        assert wf[0].prompt == "p100"
-        assert wf[0].answer == "a100"
-
-    async def test_real_temporal_json_is_well_formed(self):
-        # Sanity-check the actual data/temporal.json shipped with the repo.
-        board = await select_temporal_game()
-        assert len(board.categories) == 6
-        for cat, cells in board.categories.items():
-            assert [c.value for c in cells] == [100, 200, 300, 400, 500], cat
 
 
 class TestPersistResult:

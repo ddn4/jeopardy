@@ -79,25 +79,6 @@ async def select_random_game() -> Board:
     return board
 
 
-@activity.defn
-async def select_temporal_game() -> Board:
-    """Load the curated Temporal-themed board from data/temporal.json."""
-    raw = json.loads((DATA_DIR / "temporal.json").read_text())
-    board = Board(
-        categories={
-            cat: [
-                ClueCell(value=c["value"], prompt=c["prompt"], answer=c["answer"])
-                for c in cells
-            ]
-            for cat, cells in raw.items()
-        }
-    )
-    activity.logger.info(
-        "loaded temporal board categories=%s", list(board.categories.keys())
-    )
-    return board
-
-
 _JUDGE_MODEL = "claude-haiku-4-5"
 
 _JUDGE_SYSTEM = """You are judging answers in a game of Jeopardy.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type AnswerResult, type GameMode, type PublicGameState } from './api/client'
+import { api, type AnswerResult, type PublicGameState } from './api/client'
 import { Board } from './components/Board'
 import { ClueModal } from './components/ClueModal'
 import { ScoreBar } from './components/ScoreBar'
@@ -37,9 +37,9 @@ export function App() {
     }
   }
 
-  const startGame = async (mode: GameMode) => {
+  const startGame = async () => {
     setError(null)
-    const s = await api.createGame(mode)
+    const s = await api.createGame()
     window.location.hash = s.game_id
     setGameId(s.game_id)
     setState(s)
@@ -55,14 +55,9 @@ export function App() {
     return (
       <div className="container start">
         <h1>JEOPARDY!</h1>
-        <div className="start-buttons">
-          <button className="primary" onClick={() => startGame('random')}>
-            New Random Game
-          </button>
-          <button className="primary" onClick={() => startGame('temporal')}>
-            Temporal-themed Game
-          </button>
-        </div>
+        <button className="primary" onClick={startGame}>
+          New Game
+        </button>
         {error && <p className="error">{error}</p>}
       </div>
     )
@@ -120,7 +115,7 @@ export function App() {
         <div className="finished">
           <h2>Game over — final score: ${state.score}</h2>
           <button className="primary" onClick={resetToStart}>
-            Back to start
+            New game
           </button>
         </div>
       ) : (

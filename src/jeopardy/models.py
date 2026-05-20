@@ -2,8 +2,6 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-GameMode = Literal["random", "temporal"]
-
 
 class Clue(BaseModel):
     prompt: str
@@ -49,10 +47,6 @@ class PublicGameState(BaseModel):
     score: int
     current_clue: CurrentClue | None
     finished: bool
-
-
-class StartGameInput(BaseModel):
-    mode: GameMode = "random"
 
 
 class SelectClueInput(BaseModel):
